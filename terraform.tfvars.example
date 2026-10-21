@@ -15,3 +15,7 @@ extra_labels = {
 
 monthly_budget_usd  = 100
 deletion_protection = true
+# Who gets billing / security / technical notifications (optional).
+essential_contacts = {
+  "platform-team@example.com" = ["BILLING", "SECURITY", "TECHNICAL"]
+}
