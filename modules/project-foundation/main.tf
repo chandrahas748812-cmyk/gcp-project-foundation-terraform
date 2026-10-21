@@ -82,3 +82,23 @@ resource "google_billing_budget" "this" {
   # which fans out to email/Slack. Intentionally left unwired here:
   # notification channels differ per organization.
 }
+# ---------------------------------------------------------------------------
+# google_essential_contacts_contact — who gets notified.
+# Without this, billing and security alerts go nowhere. for_each over the
+# map keeps it DRY: one block, N contacts.
+# ---------------------------------------------------------------------------
+resource "google_essential_contacts_contact" "this" {
+  for_each = var.essential_contacts
+
+  parent = google_project.this.id # "projects/<number>"
+
+  email = each.key # map key   = the email address
+  # map value = list of categories, e.g. ["BILLING", "SECURITY"]
+  notification_category_subscriptions = each.value
+
+  # Language for the notification emails.
+  language_tag = "en-US"
+
+  # The project must exist before contacts can attach — implicit
+  # dependency via google_project.this.id orders this correctly.
+}
