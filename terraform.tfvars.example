@@ -1,0 +1,17 @@
+# Copy to terraform.tfvars and fill in YOUR values.
+# terraform.tfvars is gitignored — never commit real IDs.
+#   cp terraform.tfvars.example terraform.tfvars
+
+project_name    = "My Project Dev"
+project_id      = "my-project-dev-000001"   # globally unique, lowercase, 6-30 chars
+folder_id       = "folders/000000000000"    # your folder; or use org_id instead
+billing_account = "XXXXXX-XXXXXX-XXXXXX"    # your billing account
+environment     = "dev"
+
+extra_labels = {
+  cost_centre = "platform"
+  owner       = "platform-team"
+}
+
+monthly_budget_usd  = 100
+deletion_protection = true
