@@ -61,3 +61,16 @@ variable "deletion_protection" {
   type        = bool
   default     = true
 }
+variable "essential_contacts" {
+  description = "Email contacts for GCP notifications. Map of email -> list of categories (BILLING, SECURITY, TECHNICAL)."
+  type        = map(list(string))
+  default     = {}
+
+  validation {
+    condition = alltrue([
+      for cats in values(var.essential_contacts) :
+      alltrue([for c in cats : contains(["BILLING", "SECURITY", "TECHNICAL"], c)])
+    ])
+    error_message = "Categories must be BILLING, SECURITY, or TECHNICAL."
+  }
+}
