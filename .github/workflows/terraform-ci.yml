@@ -1,0 +1,80 @@
+# Terraform CI — safe by design.
+name: terraform-ci
+on:
+  pull_request:
+    paths: ["**.tf", ".github/workflows/terraform-ci.yml"]
+  push:
+    branches: [main]
+    paths: ["**.tf", ".github/workflows/terraform-ci.yml"]
+permissions:
+  contents: read
+  pull-requests: write
+env:
+  TF_VERSION: "1.9.0"
+jobs:
+  fmt:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@f548e57e544e1ff5a4c46bf1e1b8685f8e4a348a # v4.0.0
+      - uses: hashicorp/setup-terraform@b75000b53e9ce4de2b4712237bbdb711bdc92aba # v3.1.2
+        with:
+          terraform_version: ${{ env.TF_VERSION }}
+      - name: Check formatting (root)
+        run: terraform fmt -check -recursive -diff
+  validate:
+    runs-on: ubuntu-latest
+    needs: fmt
+    steps:
+      - uses: actions/checkout@f548e57e544e1ff5a4c46bf1e1b8685f8e4a348a # v4.0.0
+      - uses: hashicorp/setup-terraform@b75000b53e9ce4de2b4712237bbdb711bdc92aba # v3.1.2
+        with:
+          terraform_version: ${{ env.TF_VERSION }}
+      - name: Init (no backend)
+        run: terraform init -backend=false
+      - name: Validate root module
+        run: terraform validate
+      - name: Init + validate child module
+        run: |
+          cd modules/project-foundation
+          terraform init -backend=false
+          terraform validate
+  security-scan:
+    runs-on: ubuntu-latest
+    needs: validate
+    steps:
+      - uses: actions/checkout@f548e57e544e1ff5a4c46bf1e1b8685f8e4a348a # v4.0.0
+      - name: tfsec scan
+        uses: aquasecurity/tfsec-action@b466648d6e39e7c75324f25d83891162a721f2d6 # v1.0.0
+        with:
+          working_directory: .
+          soft_fail: "true"
+  plan:
+    runs-on: ubuntu-latest
+    needs: security-scan
+    if: github.event.pull_request.head.repo.full_name == github.repository
+    steps:
+      - uses: actions/checkout@f548e57e544e1ff5a4c46bf1e1b8685f8e4a348a # v4.0.0
+      - uses: hashicorp/setup-terraform@b75000b53e9ce4de2b4712237bbdb711bdc92aba # v3.1.2
+        with:
+          terraform_version: ${{ env.TF_VERSION }}
+          terraform_wrapper: false
+      - id: gcp-auth
+        uses: google-github-actions/auth@12060449e87204eca501a11f2f7f1483024afff0 # v2.1.0
+        with:
+          workload_identity_provider: ${{ secrets.GCP_WIF_PROVIDER }}
+          service_account: ${{ secrets.GCP_TF_SERVICE_ACCOUNT }}
+      - name: Terraform init
+        run: terraform init -input=false
+      - name: Terraform plan
+        id: plan
+        run: terraform plan -input=false -out=tfplan -detailed-exitcode
+        continue-on-error: true
+      - name: Upload plan artifact
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v4.0.0
+        with:
+          name: tfplan-${{ github.sha }}
+          path: tfplan
+          retention-days: 14
+      - name: Fail if plan errored
+        if: steps.plan.outputs.exitcode == 1
+        run: exit 1
