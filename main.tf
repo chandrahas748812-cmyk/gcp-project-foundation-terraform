@@ -14,4 +14,5 @@ module "project_foundation" {
   enable_apis         = var.enable_apis
   monthly_budget_usd  = var.monthly_budget_usd
   deletion_protection = var.deletion_protection
+  essential_contacts  = var.essential_contacts
 }
