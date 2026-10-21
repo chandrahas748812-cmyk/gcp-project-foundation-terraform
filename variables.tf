@@ -64,3 +64,8 @@ variable "deletion_protection" {
   type        = bool
   default     = true
 }
+variable "essential_contacts" {
+  description = "Email contacts for GCP notifications. Map of email -> list of categories (BILLING, SECURITY, TECHNICAL)."
+  type        = map(list(string))
+  default     = {}
+}
